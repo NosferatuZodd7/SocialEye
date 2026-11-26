@@ -19,6 +19,8 @@ const responses: Record<string, unknown> = {
   notifications_list: [{ id: 1, kind: "sync_failed", title: "Sample Podcast: synchronization failed", body: "token expired", read: 0, created_at: "2026-11-25 10:00:00", platform: "spotify", account_name: "Sample Podcast" }],
   providers_list: [{ provider: "google", configured: true, has_secret: true, app: { client_id: "x", redirect_port: 53682, api_version: null, updated_at: "" } }, { provider: "meta", configured: false, has_secret: false, app: null }, { provider: "spotify", configured: false, has_secret: false, app: null }],
   capabilities: [{ id: "publish", status: "unsupported", requirement: "—", note: "No public publishing API.", manual_alternative: "Use Spotify for Creators." }],
+  updates_status: { enabled: true, current: "0.1.0-dev.3", channel: "testing", repository: "o/r", auto_check: true },
+  updates_check: { version: "0.1.0-dev.7", tag: "v0.1.0-dev.7", prerelease: true, notes: "Fixes", published_at: null, html_url: "https://github.com/o/r/releases/tag/v0.1.0-dev.7" },
   app_info: { version: "0.1.0", schema_version: 1, data_dir: "C:\\data", telemetry: false },
 };
 const invoke = vi.fn(async (...a: [string, unknown?]) => { const cmd = a[0]; return (cmd.startsWith("plugin:") ? 1 : responses[cmd] ?? []); });
@@ -51,6 +53,16 @@ describe("App routes", () => {
     expect(within(panel).getByText("1,234")).toBeInTheDocument();
     expect(within(panel).getByText("YouTube Data API v3", { exact: false })).toBeInTheDocument();
     expect(within(panel).getByText("Not available")).toBeInTheDocument();
+  });
+
+  it("settings shows the update channel and an available signed update", async () => {
+    window.location.hash = "#/settings";
+    render(<App />);
+    expect(await screen.findByText("0.1.0-dev.3")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Channel" })).toHaveValue("testing");
+    (await screen.findByRole("button", { name: "Check now" })).click();
+    expect(await screen.findByText("Version 0.1.0-dev.7 is available")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Install and restart" })).toBeInTheDocument();
   });
 
   it("accounts page surfaces reconnection and last error", async () => {

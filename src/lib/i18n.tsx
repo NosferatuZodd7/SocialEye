@@ -101,6 +101,13 @@ export const en = {
   "set.data": "Data", "set.backup": "Create backup", "set.restore": "Restore backup", "set.restoreConfirm": "Replace all SocialEye data with this backup? A copy of the current data is saved as pre-restore.db first.",
   "set.exportJson": "Export all data (JSON)", "set.dataDir": "Data folder", "set.about": "About", "set.version": "Version", "set.schema": "Database schema",
   "set.privacy": "Privacy", "set.privacyBody": "No telemetry. SocialEye only contacts the platforms you connect, using their official APIs.", "set.audit": "Audit log",
+  "set.updates": "Updates", "set.updatesBody": "SocialEye updates itself from the project's GitHub Releases. Every update is signed and verified before it is installed, and nothing is installed without your confirmation.",
+  "set.channel": "Channel", "set.channel.testing": "Testing (branch builds)", "set.channel.stable": "Stable",
+  "set.channelHint": "Testing gets every build of the development branch; Stable only final releases. A stable user is never moved to a test build.",
+  "set.autoCheck": "Check for updates automatically", "set.checkNow": "Check now", "set.upToDate": "You have the latest version of this channel.",
+  "set.available": "Version {version} is available", "set.install": "Install and restart", "set.installConfirm": "Download, verify and install SocialEye {version}? The app restarts when it finishes.",
+  "set.downloading": "Downloading {pct}%", "set.releaseNotes": "Release notes", "set.updatesDisabled": "This build has no update signing key, so it cannot verify updates. Install new versions from the GitHub Releases page.",
+  "set.currentVersion": "Installed version", "set.testBuild": "test build",
   "set.backupDone": "Backup saved", "set.restoreDone": "Backup restored", "set.exportDone": "Data exported",
 } as const;
 
@@ -191,6 +198,13 @@ export const pt: Record<Key, string> = {
   "set.data": "Dados", "set.backup": "Criar cópia de segurança", "set.restore": "Restaurar cópia", "set.restoreConfirm": "Substituir todos os dados do SocialEye por esta cópia? Os dados atuais são guardados primeiro como pre-restore.db.",
   "set.exportJson": "Exportar todos os dados (JSON)", "set.dataDir": "Pasta de dados", "set.about": "Sobre", "set.version": "Versão", "set.schema": "Esquema da base de dados",
   "set.privacy": "Privacidade", "set.privacyBody": "Sem telemetria. O SocialEye só contacta as plataformas que ligar, através das APIs oficiais.", "set.audit": "Registo de auditoria",
+  "set.updates": "Atualizações", "set.updatesBody": "O SocialEye atualiza-se a partir das Releases do projeto no GitHub. Cada atualização é assinada e verificada antes de ser instalada, e nada é instalado sem a sua confirmação.",
+  "set.channel": "Canal", "set.channel.testing": "Testes (builds da branch)", "set.channel.stable": "Estável",
+  "set.channelHint": "Testes recebe todas as builds da branch de desenvolvimento; Estável só as versões finais. Quem está no Estável nunca passa para uma build de testes.",
+  "set.autoCheck": "Procurar atualizações automaticamente", "set.checkNow": "Procurar agora", "set.upToDate": "Tem a versão mais recente deste canal.",
+  "set.available": "A versão {version} está disponível", "set.install": "Instalar e reiniciar", "set.installConfirm": "Transferir, verificar e instalar o SocialEye {version}? A aplicação reinicia no fim.",
+  "set.downloading": "A transferir {pct}%", "set.releaseNotes": "Notas da versão", "set.updatesDisabled": "Esta build não tem chave de assinatura de atualizações, por isso não as pode verificar. Instale as novas versões a partir da página de Releases no GitHub.",
+  "set.currentVersion": "Versão instalada", "set.testBuild": "build de testes",
   "set.backupDone": "Cópia guardada", "set.restoreDone": "Cópia restaurada", "set.exportDone": "Dados exportados",
 };
 

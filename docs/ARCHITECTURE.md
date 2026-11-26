@@ -12,7 +12,7 @@
 │ oauth.rs      PKCE + loopback redirect     http.rs  retries, backoff,      │
 │ secrets.rs    Windows Credential Manager                error classes      │
 │ db.rs         SQLite, migrations, backup   automations.rs  rule engine     │
-│ ig_export.rs  csv_import.rs  reports.rs (CSV/XLSX)                         │
+│ ig_export.rs  csv_import.rs  reports.rs (CSV/XLSX)  updates.rs (self-update)│
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -26,6 +26,7 @@
 - **No fabricated data.** Daily metrics are upserted one row per account/content/metric/day; missing days stay missing in charts.
 - **Explicit consent.** Publishing, deleting comments, removing accounts, deleting drafts and restoring backups require `confirmed: true` from the UI's confirmation dialog; the backend rejects the call otherwise.
 - **Automations only notify.** The rule engine has no destructive actions by design.
+- **Self-update from GitHub Releases** with Testing/Stable channels, signature and signed-version verification, no downgrades and explicit consent — see [UPDATES.md](UPDATES.md).
 
 ## Synchronization
 

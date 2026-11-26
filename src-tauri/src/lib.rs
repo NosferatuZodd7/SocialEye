@@ -11,12 +11,18 @@ pub mod ig_export;
 pub mod oauth;
 pub mod reports;
 pub mod secrets;
+pub mod updates;
 
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    // The updater only exists in builds that embed the update signing key (fail closed).
+    if let Some(key) = updates::PUBKEY.filter(|k| !k.trim().is_empty()) {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(key).build());
+    }
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -36,9 +42,14 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let ui = commands::TauriUi(handle.clone());
                 tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+                let mut minutes = 0u64;
                 loop {
+                    if minutes % 360 == 0 {
+                        commands::auto_check_updates(&handle).await;
+                    }
                     handle.state::<app::AppState>().tick(&ui).await;
                     tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                    minutes += 1;
                 }
             });
             Ok(())
@@ -104,6 +115,9 @@ pub fn run() {
             commands::data_export_json,
             commands::search,
             commands::audit_log,
+            commands::updates_status,
+            commands::updates_check,
+            commands::updates_install,
         ])
         .run(tauri::generate_context!())
         .expect("error while running SocialEye");

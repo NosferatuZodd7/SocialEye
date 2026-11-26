@@ -4,7 +4,7 @@ use crate::app::{load_account, normalize_time, AppState, Ui};
 use crate::connectors::{self, Ctx, Moderation, Platform};
 use crate::db::{self, query_json};
 use crate::error::{AppError, AppResult};
-use crate::{automations, csv_import, ig_export, reports, secrets};
+use crate::{automations, csv_import, ig_export, reports, secrets, updates};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
@@ -65,7 +65,8 @@ pub fn settings_get(s: State<'_, AppState>) -> R<Value> {
     Ok(Value::Object(rows.into_iter().filter_map(|r| Some((r["key"].as_str()?.to_string(), r["value"].clone()))).collect()))
 }
 
-const SETTING_KEYS: &[&str] = &["language", "theme", "sync_interval_minutes", "desktop_notifications", "dashboard_widgets", "onboarding_done"];
+const SETTING_KEYS: &[&str] =
+    &["language", "theme", "sync_interval_minutes", "desktop_notifications", "dashboard_widgets", "onboarding_done", "update_channel", "update_auto_check"];
 
 #[tauri::command]
 pub fn settings_set(s: State<'_, AppState>, key: String, value: String) -> R<()> {
@@ -74,6 +75,9 @@ pub fn settings_set(s: State<'_, AppState>, key: String, value: String) -> R<()>
     }
     if key == "sync_interval_minutes" && !value.parse::<i64>().is_ok_and(|v| v == 0 || (15..=10_080).contains(&v)) {
         return Err(AppError::validation("sync interval must be 0 (off) or 15–10080 minutes"));
+    }
+    if key == "update_channel" && !matches!(value.as_str(), "testing" | "stable") {
+        return Err(AppError::validation("update channel must be testing or stable"));
     }
     db::set_setting(&s.db.conn(), &key, &value)
 }
@@ -834,6 +838,88 @@ pub fn search(s: State<'_, AppState>, q: String) -> R<Value> {
 #[tauri::command]
 pub fn audit_log(s: State<'_, AppState>) -> R<Vec<Value>> {
     query_json(&s.db.conn(), "SELECT * FROM audit_log ORDER BY id DESC LIMIT 500", [])
+}
+
+// ------------------------------------------------------------------ updates
+
+fn update_channel(s: &AppState) -> String {
+    db::get_setting(&s.db.conn(), "update_channel").ok().flatten().unwrap_or_else(|| updates::DEFAULT_CHANNEL.into())
+}
+
+#[tauri::command]
+pub fn updates_status(app: AppHandle, s: State<'_, AppState>) -> R<Value> {
+    Ok(json!({
+        "enabled": updates::enabled(),
+        "current": app.package_info().version.to_string(),
+        "channel": update_channel(&s),
+        "repository": updates::REPOSITORY,
+        "auto_check": db::get_setting(&s.db.conn(), "update_auto_check")?.as_deref() != Some("0"),
+    }))
+}
+
+#[tauri::command]
+pub async fn updates_check(app: AppHandle, s: State<'_, AppState>) -> R<Option<updates::Available>> {
+    let channel = update_channel(&s);
+    updates::check(&s.http, &channel, &app.package_info().version).await
+}
+
+/// Download, verify (signature + signed version) and run the installer, then restart.
+#[tauri::command]
+pub async fn updates_install(app: AppHandle, s: State<'_, AppState>, confirmed: bool) -> R<()> {
+    use tauri_plugin_updater::UpdaterExt;
+    require_confirmation(confirmed, "installing an update")?;
+    let channel = update_channel(&s);
+    let avail = updates::check(&s.http, &channel, &app.package_info().version).await?.ok_or_else(|| AppError::validation("no newer version is available"))?;
+    let upd_err = |e: tauri_plugin_updater::Error| AppError::Api { status: 0, message: format!("update failed: {e}"), retryable: false };
+    let url = url::Url::parse(&avail.manifest_url).map_err(|_| AppError::validation("invalid update URL"))?;
+    let update = app
+        .updater_builder()
+        .endpoints(vec![url])
+        .map_err(upd_err)?
+        .build()
+        .map_err(upd_err)?
+        .check()
+        .await
+        .map_err(upd_err)?
+        .ok_or_else(|| AppError::validation("the signed update manifest offers no newer version"))?;
+    db::audit(&s.db.conn(), "update.install", &avail.tag, &channel)?;
+    let ui = TauriUi(app.clone());
+    let mut received = 0u64;
+    update
+        .download_and_install(
+            |chunk, total| {
+                received += chunk as u64;
+                ui.emit("update-progress", json!({"received": received, "total": total}));
+            },
+            || {},
+        )
+        .await
+        .map_err(upd_err)?;
+    app.restart()
+}
+
+/// Background check (startup and every 6 hours): notifies once per new version, never installs.
+pub async fn auto_check_updates(app: &AppHandle) {
+    let s = app.state::<AppState>();
+    let on = db::get_setting(&s.db.conn(), "update_auto_check").ok().flatten().as_deref() != Some("0");
+    if !on || !updates::enabled() {
+        return;
+    }
+    let channel = update_channel(&s);
+    let Ok(Some(a)) = updates::check(&s.http, &channel, &app.package_info().version).await else { return };
+    let seen = db::get_setting(&s.db.conn(), "update_notified").ok().flatten();
+    if seen.as_deref() == Some(a.version.as_str()) {
+        return;
+    }
+    let title = format!("SocialEye {} is available", a.version);
+    {
+        let c = s.db.conn();
+        let _ = c.execute("INSERT INTO notifications(kind, title, body) VALUES ('update', ?1, 'Settings → Updates')", [&title]);
+        let _ = db::set_setting(&c, "update_notified", &a.version);
+    }
+    let ui = TauriUi(app.clone());
+    ui.desktop_notify(&title, "Settings → Updates");
+    ui.emit("notifications-changed", json!(1));
 }
 
 #[cfg(test)]

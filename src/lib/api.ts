@@ -124,7 +124,12 @@ export const api = {
   restore: (path: string) => call<void>("backup_restore", { path, confirmed: true }),
   exportJson: (path: string) => call<void>("data_export_json", { path }),
   search: (q: string) => call<{ accounts: { id: number; platform: Platform; name: string; handle: string | null }[]; content: { id: number; title: string; kind: string; url: string | null; platform: Platform }[]; drafts: { id: number; title: string }[] }>("search", { q }),
+  updatesStatus: () => call<{ enabled: boolean; current: string; channel: "testing" | "stable"; repository: string; auto_check: boolean }>("updates_status"),
+  updatesCheck: () => call<UpdateInfo | null>("updates_check"),
+  updatesInstall: () => call<void>("updates_install", { confirmed: true }),
   auditLog: () => call<{ id: number; at: string; action: string; target: string | null; detail: string | null }[]>("audit_log"),
 };
+
+export interface UpdateInfo { version: string; tag: string; prerelease: boolean; notes: string; published_at: string | null; html_url: string }
 
 export interface ReportData { title: string; sheets: { name: string; columns: string[]; rows: (string | number | null)[][] }[] }

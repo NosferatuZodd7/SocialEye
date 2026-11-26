@@ -22,6 +22,13 @@ O SocialEye comunica com cada plataforma através da **sua** aplicação de prog
 
 Quando um valor não é fornecido pela plataforma, aparece como **Indisponível** (com fundo tracejado) e nunca como zero.
 
+## Atualizações
+O SocialEye atualiza-se a partir das Releases do projeto no GitHub (**Definições → Atualizações**):
+- **Testes (builds da branch):** recebe cada build da branch de desenvolvimento (pre-releases `vX.Y.Z-dev.N`).
+- **Estável:** recebe só as versões finais `vX.Y.Z`.
+
+Cada atualização é assinada pelo CI e verificada pela aplicação antes de instalar; nunca instala uma versão mais antiga e só instala depois de confirmar. A configuração da chave de assinatura (uma vez, pelo dono do repositório) está em [UPDATES.md](UPDATES.md).
+
 ## Cópias de segurança
 **Definições → Dados**: criar e restaurar cópias de segurança (`.db`) e exportar todos os dados em JSON. Os tokens e segredos nunca são incluídos nas exportações.
 

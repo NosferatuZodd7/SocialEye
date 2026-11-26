@@ -20,6 +20,7 @@ Windows 10/11 · English & Português (Portugal) · MIT licensed · No telemetry
 | **Unified analytics & reports** | Side-by-side platform comparison that never adds up metrics that mean different things, period-over-period changes, publishing frequency, top content. Export to **PDF, CSV and Excel**. |
 | **Automations** | Rules (thresholds, growth, new content/comments, sync/publish failures, expiring authorization) → in-app and desktop notifications. Automations never publish or delete. |
 | **Data** | SQLite with versioned migrations, history of every metric, backup/restore, full JSON export, audit log. |
+| **Updates** | Self-update from this repository's GitHub Releases: a **Testing** channel with every build of the development branch and a **Stable** channel with tagged releases. Signed, verified, never downgraded, installed only after you confirm. |
 
 ### Honesty rules
 
@@ -27,7 +28,7 @@ SocialEye never invents numbers. Every figure shows its source and date; metrics
 
 ## Install
 
-Download the latest installer (`.exe` or `.msi`) from [Releases](../../releases). Then follow [docs/API_SETUP.md](docs/API_SETUP.md) to create your own developer app for each platform you want to connect — SocialEye talks to the platforms directly with **your** credentials.
+Download the latest installer (`.exe` or `.msi`) from [Releases](../../releases) — pre-releases are the test builds of the development branch. After that SocialEye updates itself (Settings → Updates). Then follow [docs/API_SETUP.md](docs/API_SETUP.md) to create your own developer app for each platform you want to connect — SocialEye talks to the platforms directly with **your** credentials.
 
 ## Develop
 
@@ -50,6 +51,7 @@ npm run tauri build      # Windows installers in src-tauri/target/release/bundle
 - [Architecture & database](docs/ARCHITECTURE.md)
 - [Platform limitations](docs/LIMITATIONS.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Updates and channels](docs/UPDATES.md)
 - [Release process](docs/RELEASE.md)
 - [Guia em Português](docs/GUIA_PT.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)

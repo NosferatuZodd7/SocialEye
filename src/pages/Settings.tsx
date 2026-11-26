@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { api, type Provider } from "../lib/api";
+import { api, type Provider, type UpdateInfo } from "../lib/api";
 import { useAction, useLoad } from "../lib/hooks";
 import { useT } from "../lib/i18n";
 import { useStore } from "../lib/store";
@@ -47,6 +47,65 @@ function ProviderForm({ p, onSaved }: { p: Provider; onSaved: () => void }) {
   );
 }
 
+function Updates() {
+  const t = useT();
+  const { backend, setSetting } = useStore();
+  const { confirm } = useFeedback();
+  const status = useLoad(() => (backend ? api.updatesStatus() : Promise.resolve(null)), [backend]);
+  const [found, setFound] = useState<UpdateInfo | null | undefined>(undefined);
+  const [pct, setPct] = useState<number | null>(null);
+  const act = useAction();
+  const st = status.data;
+  const check = () => act.run(async () => setFound(await api.updatesCheck()));
+  const install = (u: UpdateInfo) => act.run(async () => {
+    if (!(await confirm(t("set.installConfirm", { version: u.version }), { confirmLabel: t("set.install") }))) return;
+    const { listen } = await import("@tauri-apps/api/event");
+    const off = await listen<{ received: number; total: number | null }>("update-progress", (e) => setPct(e.payload.total ? Math.round((e.payload.received / e.payload.total) * 100) : null));
+    try { await api.updatesInstall(); } finally { off(); }
+  });
+  return (
+    <Panel title={t("set.updates")}>
+      <p className="mb-3 max-w-[75ch] text-[var(--muted)]">{t("set.updatesBody")}</p>
+      {status.error && <ErrorBox message={status.error} />}
+      {st && (
+        <>
+          <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+            <dt className="text-[var(--muted)]">{t("set.currentVersion")}</dt>
+            <dd className="num">{st.current}{st.current.includes("-") && <span className="ml-2"><Badge tone="warn">{t("set.testBuild")}</Badge></span>}</dd>
+            <dt className="text-[var(--muted)]">GitHub</dt><dd>{st.repository}</dd>
+          </dl>
+          {!st.enabled ? <p className="hatched rounded-lg p-3 text-[13px]">{t("set.updatesDisabled")}</p> : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Select label={t("set.channel")} value={st.channel} hint={t("set.channelHint")} onChange={(e) => act.run(async () => { await setSetting("update_channel", e.target.value); setFound(undefined); await status.reload(); })}>
+                  <option value="testing">{t("set.channel.testing")}</option><option value="stable">{t("set.channel.stable")}</option>
+                </Select>
+                <div className="self-center"><Toggle label={t("set.autoCheck")} checked={st.auto_check} onChange={(v) => act.run(async () => { await setSetting("update_auto_check", v ? "1" : "0"); await status.reload(); })} /></div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button busy={act.busy && !pct} onClick={check}>{t("set.checkNow")}</Button>
+                {found === null && <span className="text-[13px] text-ok">{t("set.upToDate")}</span>}
+              </div>
+              {found && (
+                <div className="mt-3 rounded-xl border border-iris/40 p-3">
+                  <div className="flex flex-wrap items-center gap-2 font-medium">{t("set.available", { version: found.version })}{found.prerelease && <Badge tone="warn">{t("set.testBuild")}</Badge>}</div>
+                  {found.notes && <details className="mt-1 text-[13px]"><summary className="cursor-pointer text-[var(--muted)]">{t("set.releaseNotes")}</summary><p className="mt-1 whitespace-pre-line">{found.notes}</p></details>}
+                  <div className="mt-2 flex gap-2">
+                    <Button variant="primary" busy={act.busy} onClick={() => install(found)}>{t("set.install")}</Button>
+                    <Button variant="ghost" onClick={() => openExternal(found.html_url)}><ExternalLink className="size-3.5" />GitHub</Button>
+                  </div>
+                  {pct != null && <div className="mt-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="mb-1 text-xs">{t("set.downloading", { pct })}</div><div className="h-1.5 rounded bg-[var(--panel-2)]"><div className="h-1.5 rounded bg-iris" style={{ width: `${pct}%` }} /></div></div>}
+                </div>
+              )}
+            </>
+          )}
+          {act.error && <div className="mt-2"><ErrorBox message={act.error} /></div>}
+        </>
+      )}
+    </Panel>
+  );
+}
+
 export default function SettingsPage() {
   const t = useT();
   const { settings, setSetting, backend } = useStore();
@@ -88,6 +147,7 @@ export default function SettingsPage() {
           {providers.error && <ErrorBox message={providers.error} />}
           <div className="grid gap-3">{providers.data?.map((p) => <ProviderForm key={p.provider} p={p} onSaved={providers.reload} />)}</div>
         </Panel>
+        <Updates />
         <Panel title={t("set.data")}>
           <div className="flex flex-wrap gap-2">
             <Button onClick={backup} disabled={!backend}>{t("set.backup")}</Button>

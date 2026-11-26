@@ -16,4 +16,5 @@ Only the latest release receives security fixes.
 - A restrictive Content Security Policy; local media is exposed to the WebView only per file through the asset-protocol scope.
 - External links are opened only for `https://` URLs.
 - Destructive or public actions require explicit confirmation, enforced in the backend.
+- Updates come only from this repository's GitHub Releases, are verified against a public key compiled into the app (minisign signature over the installer, including the version), are never older than the installed version, and are installed only after the user confirms. Builds without the key have no updater. The private key exists only as an Actions secret.
 - CI runs `npm audit` and `cargo audit`; Dependabot keeps dependencies current.
