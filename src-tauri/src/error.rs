@@ -34,11 +34,7 @@ impl AppError {
         AppError::Validation { message: m.into() }
     }
     pub fn unsupported(capability: &str, reason: &str, manual: Option<&str>) -> Self {
-        AppError::Unsupported {
-            capability: capability.into(),
-            reason: reason.into(),
-            manual_alternative: manual.map(Into::into),
-        }
+        AppError::Unsupported { capability: capability.into(), reason: reason.into(), manual_alternative: manual.map(Into::into) }
     }
     pub fn is_retryable(&self) -> bool {
         matches!(self, AppError::RateLimited { .. } | AppError::Network { .. } | AppError::Api { retryable: true, .. })

@@ -7,11 +7,8 @@ use crate::oauth::OAuthProvider;
 use chrono::Utc;
 use serde_json::{json, Value};
 
-pub static OAUTH: OAuthProvider = OAuthProvider {
-    auth_url: "https://accounts.spotify.com/authorize",
-    token_url: "https://accounts.spotify.com/api/token",
-    extra_auth_params: &[],
-};
+pub static OAUTH: OAuthProvider =
+    OAuthProvider { auth_url: "https://accounts.spotify.com/authorize", token_url: "https://accounts.spotify.com/api/token", extra_auth_params: &[] };
 
 pub const SCOPES: &[&str] = &["user-read-private", "user-library-read"];
 const API: &str = "https://api.spotify.com/v1";
@@ -120,7 +117,8 @@ pub async fn sync(ctx: &Ctx<'_>, account_type: &str, id: &str) -> AppResult<Sync
         }
         offset += 50;
     }
-    d.unavailable.push("followers, plays, listeners, consumption, demographics: not exposed by the Spotify Web API — import Spotify for Creators CSV exports".into());
+    d.unavailable
+        .push("followers, plays, listeners, consumption, demographics: not exposed by the Spotify Web API — import Spotify for Creators CSV exports".into());
     Ok(d)
 }
 
@@ -139,7 +137,9 @@ mod tests {
 
     #[test]
     fn episode_parsing() {
-        let e = parse_episode(&json!({"id":"e1","name":"Ep 1","release_date":"2026-02-01","duration_ms":61000,"external_urls":{"spotify":"https://open.spotify.com/episode/e1"},"images":[{"url":"i"}]}));
+        let e = parse_episode(
+            &json!({"id":"e1","name":"Ep 1","release_date":"2026-02-01","duration_ms":61000,"external_urls":{"spotify":"https://open.spotify.com/episode/e1"},"images":[{"url":"i"}]}),
+        );
         assert_eq!(e.duration_secs, Some(61));
         assert_eq!(e.kind, "episode");
         assert_eq!(e.thumbnail_url.as_deref(), Some("i"));

@@ -1,0 +1,13 @@
+name: Feature request
+description: Suggest an improvement or a new integration
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: What are you trying to do?, description: Describe the need before the solution. }
+    validations: { required: true }
+  - type: textarea
+    id: api
+    attributes:
+      label: Official API support
+      description: If this needs platform data, link the official API documentation that provides it. Features that need scraping or unofficial APIs will not be accepted.

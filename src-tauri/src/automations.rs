@@ -10,16 +10,28 @@ use serde_json::Value;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Trigger {
     /// Account metric (latest value) crosses a threshold, e.g. subscribers ≥ 10,000.
-    MetricThreshold { metric: String, value: f64 },
+    MetricThreshold {
+        metric: String,
+        value: f64,
+    },
     /// A single content item's stat crosses a threshold, e.g. video views ≥ 10,000.
-    ContentThreshold { metric: String, value: f64 },
+    ContentThreshold {
+        metric: String,
+        value: f64,
+    },
     /// Account metric grew by at least `value` over `days`.
-    MetricGain { metric: String, value: f64, days: i64 },
+    MetricGain {
+        metric: String,
+        value: f64,
+        days: i64,
+    },
     NewContent,
     NewComments,
     SyncFailed,
     ReconnectRequired,
-    TokenExpiring { days: i64 },
+    TokenExpiring {
+        days: i64,
+    },
     PublishFailed,
 }
 
@@ -63,7 +75,9 @@ pub struct Fired {
 
 pub fn validate(rule: &Rule) -> AppResult<()> {
     match &rule.trigger {
-        Trigger::MetricThreshold { metric, .. } | Trigger::ContentThreshold { metric, .. } if metric.trim().is_empty() => Err(AppError::validation("metric is required")),
+        Trigger::MetricThreshold { metric, .. } | Trigger::ContentThreshold { metric, .. } if metric.trim().is_empty() => {
+            Err(AppError::validation("metric is required"))
+        }
         Trigger::MetricGain { days, .. } if !(1..=365).contains(days) => Err(AppError::validation("days must be between 1 and 365")),
         Trigger::TokenExpiring { days } if !(1..=60).contains(days) => Err(AppError::validation("days must be between 1 and 60")),
         _ if !rule.notify_in_app && !rule.notify_desktop => Err(AppError::validation("choose at least one notification action")),
@@ -95,10 +109,8 @@ pub fn seed_defaults(conn: &Connection) -> AppResult<()> {
 
 /// Record a firing unless this dedupe key already fired for the rule.
 fn fire_once(conn: &Connection, automation_id: i64, key: &str, msg: &str) -> AppResult<bool> {
-    let n = conn.execute(
-        "INSERT OR IGNORE INTO automation_runs(automation_id, status, message, dedupe_key) VALUES (?1, 'fired', ?2, ?3)",
-        (automation_id, msg, key),
-    )?;
+    let n = conn
+        .execute("INSERT OR IGNORE INTO automation_runs(automation_id, status, message, dedupe_key) VALUES (?1, 'fired', ?2, ?3)", (automation_id, msg, key))?;
     if n > 0 {
         conn.execute("UPDATE automations SET last_fired_at = datetime('now') WHERE id = ?1", [automation_id])?;
     }
@@ -148,7 +160,11 @@ pub fn evaluate(conn: &Connection, account_id: i64, events: &[Event]) -> AppResu
             }
             Trigger::ContentThreshold { metric, value } => {
                 let path = format!("$.{metric}");
-                for c in query_json(conn, "SELECT id, title FROM content_items WHERE account_id = ?1 AND json_extract(stats_json, ?2) >= ?3", (account_id, &path, value))? {
+                for c in query_json(
+                    conn,
+                    "SELECT id, title FROM content_items WHERE account_id = ?1 AND json_extract(stats_json, ?2) >= ?3",
+                    (account_id, &path, value),
+                )? {
                     let cid = c["id"].as_i64().unwrap_or_default();
                     let t = c["title"].as_str().unwrap_or("content").to_string();
                     hits.push((format!("cthr:{cid}:{metric}:{value}"), format!("“{t}” reached {value} {metric}"), name.clone()));
@@ -158,18 +174,32 @@ pub fn evaluate(conn: &Connection, account_id: i64, events: &[Event]) -> AppResu
                 if let Some(exp) = expires {
                     let left = exp - chrono::Utc::now().timestamp();
                     if left > 0 && left < days * 86_400 {
-                        hits.push((format!("exp:{account_id}:{exp}"), format!("{name}: authorization expires soon"), "Reconnect the account in Accounts to keep syncing.".into()));
+                        hits.push((
+                            format!("exp:{account_id}:{exp}"),
+                            format!("{name}: authorization expires soon"),
+                            "Reconnect the account in Accounts to keep syncing.".into(),
+                        ));
                     }
                 }
             }
             t => {
                 for e in events {
                     let h = match (t, e) {
-                        (Trigger::SyncFailed, Event::SyncFailed { run_id, error }) => (format!("fail:{run_id}"), format!("{name}: synchronization failed"), error.clone()),
-                        (Trigger::ReconnectRequired, Event::ReconnectRequired { error }) => (format!("reconn:{account_id}:{}", chrono::Utc::now().date_naive()), format!("{name} needs to be reconnected"), error.clone()),
-                        (Trigger::NewContent, Event::NewContent { content_id, title }) => (format!("new:{content_id}"), format!("New on {name}"), title.clone()),
-                        (Trigger::NewComments, Event::NewComments { content_id, title, delta, total }) => (format!("cmt:{content_id}:{total}"), format!("{delta} new comment(s) on “{title}”"), name.clone()),
-                        (Trigger::PublishFailed, Event::PublishFailed { variant_id, error }) => (format!("pub:{variant_id}:{}", chrono::Utc::now().timestamp()), format!("Publishing to {name} failed"), error.clone()),
+                        (Trigger::SyncFailed, Event::SyncFailed { run_id, error }) => {
+                            (format!("fail:{run_id}"), format!("{name}: synchronization failed"), error.clone())
+                        }
+                        (Trigger::ReconnectRequired, Event::ReconnectRequired { error }) => {
+                            (format!("reconn:{account_id}:{}", chrono::Utc::now().date_naive()), format!("{name} needs to be reconnected"), error.clone())
+                        }
+                        (Trigger::NewContent, Event::NewContent { content_id, title }) => {
+                            (format!("new:{content_id}"), format!("New on {name}"), title.clone())
+                        }
+                        (Trigger::NewComments, Event::NewComments { content_id, title, delta, total }) => {
+                            (format!("cmt:{content_id}:{total}"), format!("{delta} new comment(s) on “{title}”"), name.clone())
+                        }
+                        (Trigger::PublishFailed, Event::PublishFailed { variant_id, error }) => {
+                            (format!("pub:{variant_id}:{}", chrono::Utc::now().timestamp()), format!("Publishing to {name} failed"), error.clone())
+                        }
                         _ => continue,
                     };
                     hits.push(h);
@@ -237,7 +267,8 @@ mod tests {
     fn content_threshold_and_platform_filter() {
         let (db, a) = setup();
         let c = db.conn();
-        c.execute("INSERT INTO content_items(account_id, external_id, kind, title, stats_json) VALUES (?1, 'v', 'video', 'Vid', '{\"views\": 15000}')", [a]).unwrap();
+        c.execute("INSERT INTO content_items(account_id, external_id, kind, title, stats_json) VALUES (?1, 'v', 'video', 'Vid', '{\"views\": 15000}')", [a])
+            .unwrap();
         let mut r = rule(Trigger::ContentThreshold { metric: "views".into(), value: 10000.0 });
         r.platforms = vec!["spotify".into()];
         let id = add(&c, r.clone());

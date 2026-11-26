@@ -8,11 +8,7 @@ use std::time::Duration;
 const MAX_ATTEMPTS: u32 = 4;
 
 pub fn client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent(concat!("SocialEye/", env!("CARGO_PKG_VERSION")))
-        .timeout(Duration::from_secs(60))
-        .build()
-        .expect("reqwest client")
+    reqwest::Client::builder().user_agent(concat!("SocialEye/", env!("CARGO_PKG_VERSION"))).timeout(Duration::from_secs(60)).build().expect("reqwest client")
 }
 
 /// Send `rb`, retrying retryable failures. Returns parsed JSON (Null for empty bodies).
@@ -23,11 +19,7 @@ pub async fn send(rb: RequestBuilder) -> AppResult<Value> {
         let result: AppResult<()> = match req.send().await {
             Ok(resp) => {
                 let status = resp.status().as_u16();
-                let retry_after = resp
-                    .headers()
-                    .get("retry-after")
-                    .and_then(|v| v.to_str().ok())
-                    .and_then(|v| v.parse::<u64>().ok());
+                let retry_after = resp.headers().get("retry-after").and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
                 let text = resp.text().await.unwrap_or_default();
                 if (200..300).contains(&status) {
                     return Ok(if text.trim().is_empty() { Value::Null } else { serde_json::from_str(&text)? });

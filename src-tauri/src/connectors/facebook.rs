@@ -6,20 +6,11 @@ use crate::oauth::OAuthProvider;
 use chrono::{Duration, Utc};
 use serde_json::{json, Value};
 
-pub static OAUTH: OAuthProvider = OAuthProvider {
-    auth_url: "https://www.facebook.com/dialog/oauth",
-    token_url: "https://graph.facebook.com/oauth/access_token",
-    extra_auth_params: &[],
-};
+pub static OAUTH: OAuthProvider =
+    OAuthProvider { auth_url: "https://www.facebook.com/dialog/oauth", token_url: "https://graph.facebook.com/oauth/access_token", extra_auth_params: &[] };
 
-pub const SCOPES: &[&str] = &[
-    "pages_show_list",
-    "pages_read_engagement",
-    "pages_manage_posts",
-    "pages_manage_engagement",
-    "read_insights",
-    "business_management",
-];
+pub const SCOPES: &[&str] =
+    &["pages_show_list", "pages_read_engagement", "pages_manage_posts", "pages_manage_engagement", "read_insights", "business_management"];
 
 pub const SOURCE: &str = "Meta Graph API (Facebook Page)";
 pub const DEFAULT_GRAPH_VERSION: &str = "v24.0";
@@ -40,11 +31,7 @@ pub async fn me_accounts(ctx: &Ctx<'_>) -> AppResult<Vec<Value>> {
     let mut url = ctx.graph("me/accounts");
     let mut first = true;
     loop {
-        let v = if first {
-            ctx.get(&url, &[("fields", PAGES_FIELDS), ("limit", "100")]).await?
-        } else {
-            ctx.get(&url, &[]).await?
-        };
+        let v = if first { ctx.get(&url, &[("fields", PAGES_FIELDS), ("limit", "100")]).await? } else { ctx.get(&url, &[]).await? };
         out.extend(v["data"].as_array().cloned().unwrap_or_default());
         match v["paging"]["next"].as_str() {
             Some(n) if out.len() < 1000 => {
@@ -137,10 +124,13 @@ pub async fn sync(ctx: &Ctx<'_>, page_id: &str) -> AppResult<SyncData> {
     }
 
     let posts = ctx
-        .get(&ctx.graph(&format!("{page_id}/published_posts")), &[
-            ("fields", "id,message,created_time,permalink_url,full_picture,shares,comments.summary(true).limit(0),reactions.summary(true).limit(0)"),
-            ("limit", "100"),
-        ])
+        .get(
+            &ctx.graph(&format!("{page_id}/published_posts")),
+            &[
+                ("fields", "id,message,created_time,permalink_url,full_picture,shares,comments.summary(true).limit(0),reactions.summary(true).limit(0)"),
+                ("limit", "100"),
+            ],
+        )
         .await;
     if let Some(v) = d.soft("posts", posts)? {
         d.content.extend(v["data"].as_array().into_iter().flatten().map(parse_post));
@@ -160,7 +150,12 @@ pub async fn sync(ctx: &Ctx<'_>, page_id: &str) -> AppResult<SyncData> {
 }
 
 pub async fn comments(ctx: &Ctx<'_>, post_id: &str) -> AppResult<Vec<Comment>> {
-    let v = ctx.get(&ctx.graph(&format!("{post_id}/comments")), &[("fields", "id,message,from{name},created_time,is_hidden,like_count"), ("limit", "100"), ("filter", "stream")]).await?;
+    let v = ctx
+        .get(
+            &ctx.graph(&format!("{post_id}/comments")),
+            &[("fields", "id,message,from{name},created_time,is_hidden,like_count"), ("limit", "100"), ("filter", "stream")],
+        )
+        .await?;
     Ok(v["data"]
         .as_array()
         .into_iter()
@@ -188,7 +183,12 @@ pub async fn moderate(ctx: &Ctx<'_>, comment_id: &str, m: &Moderation) -> AppRes
 }
 
 pub async fn publish(ctx: &Ctx<'_>, page_id: &str, req: &PublishRequest) -> AppResult<PublishResult> {
-    let sched_ts = req.scheduled_at.as_deref().map(|s| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.timestamp().to_string())).transpose().map_err(|_| AppError::validation("invalid scheduled time"))?;
+    let sched_ts = req
+        .scheduled_at
+        .as_deref()
+        .map(|s| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.timestamp().to_string()))
+        .transpose()
+        .map_err(|_| AppError::validation("invalid scheduled time"))?;
     let v = if let Some(path) = &req.media_path {
         let bytes = tokio::fs::read(path).await?;
         let name = std::path::Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or("photo.jpg").to_string();
@@ -215,7 +215,11 @@ pub async fn publish(ctx: &Ctx<'_>, page_id: &str, req: &PublishRequest) -> AppR
         }
         ctx.post_form(&ctx.graph(&format!("{page_id}/feed")), &form).await?
     };
-    let id = v["post_id"].as_str().or(v["id"].as_str()).ok_or_else(|| AppError::Api { status: 500, message: "Meta did not return a post id".into(), retryable: false })?;
+    let id = v["post_id"].as_str().or(v["id"].as_str()).ok_or_else(|| AppError::Api {
+        status: 500,
+        message: "Meta did not return a post id".into(),
+        retryable: false,
+    })?;
     Ok(PublishResult { external_id: id.into(), url: Some(format!("https://www.facebook.com/{id}")), scheduled: sched_ts.is_some() })
 }
 
@@ -240,7 +244,9 @@ mod tests {
 
     #[test]
     fn post_parsing() {
-        let p = parse_post(&json!({"id":"1_2","message":"Hello","created_time":"2026-01-01T00:00:00+0000","reactions":{"summary":{"total_count":5}},"shares":{"count":2}}));
+        let p = parse_post(
+            &json!({"id":"1_2","message":"Hello","created_time":"2026-01-01T00:00:00+0000","reactions":{"summary":{"total_count":5}},"shares":{"count":2}}),
+        );
         assert_eq!(p.stats["reactions"], json!(5.0));
         assert_eq!(p.stats["shares"], json!(2.0));
         assert_eq!(p.title.as_deref(), Some("Hello"));

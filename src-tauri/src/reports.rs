@@ -105,7 +105,10 @@ mod tests {
     use serde_json::json;
 
     fn report() -> Report {
-        serde_json::from_value(json!({"title":"T","sheets":[{"name":"Overview","columns":["Day","Views"],"rows":[["2026-01-01",10],["=HYPERLINK(\"x\")",null]]}]})).unwrap()
+        serde_json::from_value(
+            json!({"title":"T","sheets":[{"name":"Overview","columns":["Day","Views"],"rows":[["2026-01-01",10],["=HYPERLINK(\"x\")",null]]}]}),
+        )
+        .unwrap()
     }
 
     #[test]

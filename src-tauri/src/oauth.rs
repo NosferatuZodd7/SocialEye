@@ -73,9 +73,9 @@ pub fn parse_callback(request_line: &str, expected_state: &str) -> AppResult<Str
 
 /// Bind the loopback listener *before* opening the browser so the redirect cannot race us.
 pub async fn bind(port: u16) -> AppResult<TcpListener> {
-    TcpListener::bind(("127.0.0.1", port)).await.map_err(|e| AppError::Io {
-        message: format!("cannot listen on 127.0.0.1:{port} ({e}). Change the redirect port in Settings → Platform apps."),
-    })
+    TcpListener::bind(("127.0.0.1", port))
+        .await
+        .map_err(|e| AppError::Io { message: format!("cannot listen on 127.0.0.1:{port} ({e}). Change the redirect port in Settings → Platform apps.") })
 }
 
 /// Wait (max 5 minutes) for the browser redirect and return the authorization code.
@@ -98,7 +98,10 @@ pub async fn wait_for_code(listener: TcpListener, state: &str) -> AppResult<Stri
             };
             let body = format!("<!doctype html><meta charset=utf-8><title>SocialEye</title><body style=\"font-family:sans-serif;padding:3rem\"><h2>{msg}</h2>");
             let _ = sock
-                .write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes())
+                .write_all(
+                    format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())
+                        .as_bytes(),
+                )
                 .await;
             return result;
         }
@@ -109,10 +112,9 @@ pub async fn wait_for_code(listener: TcpListener, state: &str) -> AppResult<Stri
 }
 
 pub fn parse_token_response(v: &Value, now: i64) -> AppResult<TokenSet> {
-    let access = v["access_token"].as_str().ok_or_else(|| AppError::Auth {
-        message: "token response did not include an access token".into(),
-        reconnect_required: true,
-    })?;
+    let access = v["access_token"]
+        .as_str()
+        .ok_or_else(|| AppError::Auth { message: "token response did not include an access token".into(), reconnect_required: true })?;
     Ok(TokenSet {
         access_token: access.into(),
         refresh_token: v["refresh_token"].as_str().map(Into::into),
@@ -130,13 +132,8 @@ pub async fn exchange_code(
     verifier: &str,
 ) -> AppResult<TokenSet> {
     let ru = redirect_uri(port);
-    let mut form = vec![
-        ("grant_type", "authorization_code"),
-        ("code", code),
-        ("redirect_uri", ru.as_str()),
-        ("client_id", client_id),
-        ("code_verifier", verifier),
-    ];
+    let mut form =
+        vec![("grant_type", "authorization_code"), ("code", code), ("redirect_uri", ru.as_str()), ("client_id", client_id), ("code_verifier", verifier)];
     if let Some(s) = client_secret {
         form.push(("client_secret", s));
     }
@@ -144,13 +141,7 @@ pub async fn exchange_code(
     parse_token_response(&v, chrono::Utc::now().timestamp())
 }
 
-pub async fn refresh(
-    http: &reqwest::Client,
-    p: &OAuthProvider,
-    client_id: &str,
-    client_secret: Option<&str>,
-    refresh_token: &str,
-) -> AppResult<TokenSet> {
+pub async fn refresh(http: &reqwest::Client, p: &OAuthProvider, client_id: &str, client_secret: Option<&str>, refresh_token: &str) -> AppResult<TokenSet> {
     let mut form = vec![("grant_type", "refresh_token"), ("refresh_token", refresh_token), ("client_id", client_id)];
     if let Some(s) = client_secret {
         form.push(("client_secret", s));

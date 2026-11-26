@@ -48,11 +48,10 @@ pub struct Account {
 }
 
 pub fn load_account(c: &Connection, id: i64) -> AppResult<Account> {
-    let (platform, account_type, external_id, name, parent_account_id, last_sync): (String, String, String, String, Option<i64>, Option<String>) = c.query_row(
-        "SELECT platform, account_type, external_id, name, parent_account_id, last_sync_at FROM accounts WHERE id = ?1",
-        [id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)),
-    )?;
+    let (platform, account_type, external_id, name, parent_account_id, last_sync): (String, String, String, String, Option<i64>, Option<String>) = c
+        .query_row("SELECT platform, account_type, external_id, name, parent_account_id, last_sync_at FROM accounts WHERE id = ?1", [id], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+        })?;
     Ok(Account { id, platform: Platform::parse(&platform)?, account_type, external_id, name, parent_account_id, had_synced: last_sync.is_some() })
 }
 
@@ -167,7 +166,9 @@ impl AppState {
         let mut ids = vec![];
         for d in found {
             let t = match &d.token_override {
-                Some(page_token) => TokenSet { access_token: page_token.clone(), refresh_token: None, expires_at: if long_lived { None } else { tokens.expires_at } },
+                Some(page_token) => {
+                    TokenSet { access_token: page_token.clone(), refresh_token: None, expires_at: if long_lived { None } else { tokens.expires_at } }
+                }
                 None => tokens.clone(),
             };
             let id = self.upsert_account(platform, &d, None, &scopes, t.expires_at)?;
@@ -400,14 +401,20 @@ impl AppState {
                     "UPDATE draft_variants SET status = ?1, external_id = ?2, published_at = CASE WHEN ?1 = 'published' THEN ?3 ELSE NULL END WHERE id = ?4",
                     (st, &r.external_id, now_rfc3339(), variant_id),
                 )?;
-                c.execute("INSERT INTO publish_history(variant_id, account_id, action, status, message, external_id) VALUES (?1, ?2, ?3, 'ok', ?4, ?5)", (variant_id, acc.id, if r.scheduled { "schedule" } else { "publish" }, r.url.clone().unwrap_or_default(), &r.external_id))?;
+                c.execute(
+                    "INSERT INTO publish_history(variant_id, account_id, action, status, message, external_id) VALUES (?1, ?2, ?3, 'ok', ?4, ?5)",
+                    (variant_id, acc.id, if r.scheduled { "schedule" } else { "publish" }, r.url.clone().unwrap_or_default(), &r.external_id),
+                )?;
                 db::audit(&c, "content.publish", acc.platform.as_str(), &r.external_id)?;
                 Ok(json!({"status": st, "external_id": r.external_id, "url": r.url}))
             }
             Err(e) => {
                 let msg = e.to_string();
                 c.execute("UPDATE draft_variants SET status = 'failed', error = ?1 WHERE id = ?2", (&msg, variant_id))?;
-                c.execute("INSERT INTO publish_history(variant_id, account_id, action, status, message) VALUES (?1, ?2, 'publish', 'failed', ?3)", (variant_id, acc.id, &msg))?;
+                c.execute(
+                    "INSERT INTO publish_history(variant_id, account_id, action, status, message) VALUES (?1, ?2, 'publish', 'failed', ?3)",
+                    (variant_id, acc.id, &msg),
+                )?;
                 drop(c);
                 self.run_automations(ui, acc.id, &[Event::PublishFailed { variant_id, error: msg }]);
                 Err(e)
@@ -459,7 +466,9 @@ impl AppState {
         }
         let expiring: Vec<i64> = {
             let c = self.db.conn();
-            let r = c.prepare("SELECT id FROM accounts WHERE token_expires_at IS NOT NULL AND status = 'connected'").and_then(|mut s| s.query_map([], |r| r.get(0))?.collect());
+            let r = c
+                .prepare("SELECT id FROM accounts WHERE token_expires_at IS NOT NULL AND status = 'connected'")
+                .and_then(|mut s| s.query_map([], |r| r.get(0))?.collect());
             r.unwrap_or_default()
         };
         for id in expiring {
@@ -474,14 +483,19 @@ pub fn persist_sync(conn: &mut Connection, acc: &Account, run_id: i64, d: SyncDa
     let today = chrono::Utc::now().date_naive().to_string();
     let mut events = vec![];
     if let Some(p) = &d.profile {
-        tx.execute("UPDATE accounts SET name = ?1, handle = COALESCE(?2, handle), avatar_url = COALESCE(?3, avatar_url) WHERE id = ?4", (&p.name, &p.handle, &p.avatar_url, acc.id))?;
+        tx.execute(
+            "UPDATE accounts SET name = ?1, handle = COALESCE(?2, handle), avatar_url = COALESCE(?3, avatar_url) WHERE id = ?4",
+            (&p.name, &p.handle, &p.avatar_url, acc.id),
+        )?;
     }
     for row in &d.content {
         if row.external_id.is_empty() {
             continue;
         }
         let prev: Option<(i64, String)> = tx
-            .query_row("SELECT id, stats_json FROM content_items WHERE account_id = ?1 AND external_id = ?2", (acc.id, &row.external_id), |r| Ok((r.get(0)?, r.get(1)?)))
+            .query_row("SELECT id, stats_json FROM content_items WHERE account_id = ?1 AND external_id = ?2", (acc.id, &row.external_id), |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
             .optional()?;
         let stats = Value::Object(row.stats.clone());
         let cid: i64 = tx.query_row(
@@ -537,7 +551,10 @@ pub fn persist_sync(conn: &mut Connection, acc: &Account, run_id: i64, d: SyncDa
         (acc.id, now_rfc3339()),
     )?;
     let unavailable = d.unavailable.join("\n");
-    tx.execute("UPDATE sync_runs SET finished_at = datetime('now'), status = 'ok', items = ?1, unavailable = ?2 WHERE id = ?3", (d.content.len() as i64, &unavailable, run_id))?;
+    tx.execute(
+        "UPDATE sync_runs SET finished_at = datetime('now'), status = 'ok', items = ?1, unavailable = ?2 WHERE id = ?3",
+        (d.content.len() as i64, &unavailable, run_id),
+    )?;
     tx.execute("UPDATE accounts SET last_sync_at = datetime('now'), last_sync_status = 'ok', last_error = NULL, status = 'connected' WHERE id = ?1", [acc.id])?;
     tx.commit()?;
     Ok((json!({"content": d.content.len(), "metrics": d.metrics.len(), "unavailable": d.unavailable}), events))
@@ -554,7 +571,14 @@ mod tests {
     }
 
     fn yt(s: &AppState) -> i64 {
-        let d = DiscoveredAccount { account_type: "channel".into(), external_id: "UC1".into(), name: "Chan".into(), handle: None, avatar_url: None, token_override: None };
+        let d = DiscoveredAccount {
+            account_type: "channel".into(),
+            external_id: "UC1".into(),
+            name: "Chan".into(),
+            handle: None,
+            avatar_url: None,
+            token_override: None,
+        };
         s.upsert_account(Platform::Youtube, &d, None, "", None).unwrap()
     }
 
@@ -579,7 +603,8 @@ mod tests {
         let ev = run(&s, vec![video("a", 3.0), video("b", 0.0)]);
         assert!(ev.iter().any(|e| matches!(e, Event::NewContent { title, .. } if title == "b")));
         assert!(ev.iter().any(|e| matches!(e, Event::NewComments { delta: 2, .. })));
-        let n: i64 = s.db.conn().query_row("SELECT count(*) FROM metric_snapshots WHERE content_id IS NOT NULL AND metric = 'views'", [], |r| r.get(0)).unwrap();
+        let n: i64 =
+            s.db.conn().query_row("SELECT count(*) FROM metric_snapshots WHERE content_id IS NOT NULL AND metric = 'views'", [], |r| r.get(0)).unwrap();
         assert_eq!(n, 2);
     }
 
@@ -602,7 +627,8 @@ mod tests {
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         assert!(rt.block_on(s.sync_account(&NoUi, id)).is_err()); // no token stored
         let c = s.db.conn();
-        let (status, err): (String, String) = c.query_row("SELECT status, last_error FROM accounts WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        let (status, err): (String, String) =
+            c.query_row("SELECT status, last_error FROM accounts WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!(status, "reconnect_required");
         assert!(err.contains("reconnected"));
         let n: i64 = c.query_row("SELECT count(*) FROM notifications", [], |r| r.get(0)).unwrap();
@@ -622,11 +648,19 @@ mod tests {
     #[test]
     fn publish_validation_and_local_instagram_schedule() {
         let s = state();
-        let d = DiscoveredAccount { account_type: "professional".into(), external_id: "ig1".into(), name: "IG".into(), handle: None, avatar_url: None, token_override: None };
+        let d = DiscoveredAccount {
+            account_type: "professional".into(),
+            external_id: "ig1".into(),
+            name: "IG".into(),
+            handle: None,
+            avatar_url: None,
+            token_override: None,
+        };
         let ig = s.upsert_account(Platform::Instagram, &d, None, "", None).unwrap();
         let vid = {
             let c = s.db.conn();
-            c.execute("INSERT INTO media_assets(path, name, kind, size_bytes, public_url) VALUES ('/x.jpg','x.jpg','image',1,'https://cdn.example/x.jpg')", []).unwrap();
+            c.execute("INSERT INTO media_assets(path, name, kind, size_bytes, public_url) VALUES ('/x.jpg','x.jpg','image',1,'https://cdn.example/x.jpg')", [])
+                .unwrap();
             let m = c.last_insert_rowid();
             c.execute("INSERT INTO drafts(title, body, media_asset_id) VALUES ('T', 'caption', ?1)", [m]).unwrap();
             let dr = c.last_insert_rowid();

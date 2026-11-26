@@ -1,0 +1,27 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "**Never paste tokens, client secrets or exported personal data.** For security issues, follow SECURITY.md instead."
+  - type: input
+    id: version
+    attributes: { label: SocialEye version, placeholder: "0.1.0 (Settings → About)" }
+    validations: { required: true }
+  - type: dropdown
+    id: os
+    attributes: { label: Windows version, options: [Windows 11, Windows 10, Other] }
+    validations: { required: true }
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Instagram, Facebook, YouTube, Spotify, Content studio, Analytics/Reports, Automations, Settings/Backup, Other]
+  - type: textarea
+    id: what
+    attributes: { label: What happened, description: Steps to reproduce, what you expected, what you saw. }
+    validations: { required: true }
+  - type: textarea
+    id: errors
+    attributes: { label: Error messages, description: "Copy the text from the error box or Accounts → Sync history.", render: text }

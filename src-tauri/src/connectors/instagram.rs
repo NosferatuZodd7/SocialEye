@@ -91,7 +91,12 @@ pub async fn sync(ctx: &Ctx<'_>, ig_id: &str) -> AppResult<SyncData> {
         }
     }
 
-    let media = ctx.get(&ctx.graph(&format!("{ig_id}/media")), &[("fields", "id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count"), ("limit", "100")]).await;
+    let media = ctx
+        .get(
+            &ctx.graph(&format!("{ig_id}/media")),
+            &[("fields", "id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count"), ("limit", "100")],
+        )
+        .await;
     if let Some(v) = d.soft("media", media)? {
         d.content.extend(v["data"].as_array().into_iter().flatten().map(parse_media));
     }
@@ -157,7 +162,11 @@ pub async fn publish(ctx: &Ctx<'_>, ig_id: &str, req: &PublishRequest) -> AppRes
         match s["status_code"].as_str() {
             Some("FINISHED") | None => break,
             Some("ERROR") | Some("EXPIRED") => {
-                return Err(AppError::Api { status: 422, message: format!("Instagram could not process the media: {}", s["status"].as_str().unwrap_or("unknown error")), retryable: false })
+                return Err(AppError::Api {
+                    status: 422,
+                    message: format!("Instagram could not process the media: {}", s["status"].as_str().unwrap_or("unknown error")),
+                    retryable: false,
+                })
             }
             _ => tokio::time::sleep(std::time::Duration::from_secs(5)).await,
         }
@@ -174,10 +183,8 @@ mod tests {
 
     #[test]
     fn only_pages_with_ig_accounts() {
-        let pages = vec![
-            json!({"id":"p1","access_token":"T","instagram_business_account":{"id":"ig1","username":"me"}}),
-            json!({"id":"p2","access_token":"T2"}),
-        ];
+        let pages =
+            vec![json!({"id":"p1","access_token":"T","instagram_business_account":{"id":"ig1","username":"me"}}), json!({"id":"p2","access_token":"T2"})];
         let a = parse_ig_accounts(&pages);
         assert_eq!(a.len(), 1);
         assert_eq!(a[0].handle.as_deref(), Some("me"));

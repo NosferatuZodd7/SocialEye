@@ -363,11 +363,14 @@ pub fn media_add(app: AppHandle, s: State<'_, AppState>, paths: Vec<String>) -> 
 #[tauri::command]
 pub fn media_list(s: State<'_, AppState>) -> R<Vec<Value>> {
     let rows = query_json(&s.db.conn(), "SELECT * FROM media_assets ORDER BY id DESC", [])?;
-    Ok(rows.into_iter().map(|mut r| {
-        let exists = r["path"].as_str().is_some_and(|p| Path::new(p).is_file());
-        r["missing"] = json!(!exists);
-        r
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|mut r| {
+            let exists = r["path"].as_str().is_some_and(|p| Path::new(p).is_file());
+            r["missing"] = json!(!exists);
+            r
+        })
+        .collect())
 }
 
 #[tauri::command]
@@ -479,7 +482,9 @@ pub fn variant_save(s: State<'_, AppState>, v: VariantInput) -> R<i64> {
     let c = s.db.conn();
     if let Some(id) = v.id {
         let st: String = c.query_row("SELECT status FROM draft_variants WHERE id = ?1", [id], |r| r.get(0))?;
-        if matches!(st.as_str(), "published" | "publishing") || (st == "scheduled" && c.query_row("SELECT external_id IS NOT NULL FROM draft_variants WHERE id = ?1", [id], |r| r.get::<_, bool>(0))?) {
+        if matches!(st.as_str(), "published" | "publishing")
+            || (st == "scheduled" && c.query_row("SELECT external_id IS NOT NULL FROM draft_variants WHERE id = ?1", [id], |r| r.get::<_, bool>(0))?)
+        {
             return Err(AppError::validation("this version is already on the platform; edit it there"));
         }
         c.execute(
@@ -581,7 +586,11 @@ pub fn calendar_items(s: State<'_, AppState>, from: String, to: String) -> R<Vec
 
 #[tauri::command]
 pub fn automations_list(s: State<'_, AppState>) -> R<Vec<Value>> {
-    query_json(&s.db.conn(), "SELECT a.*, (SELECT count(*) FROM automation_runs r WHERE r.automation_id = a.id) AS run_count FROM automations a ORDER BY a.id", [])
+    query_json(
+        &s.db.conn(),
+        "SELECT a.*, (SELECT count(*) FROM automation_runs r WHERE r.automation_id = a.id) AS run_count FROM automations a ORDER BY a.id",
+        [],
+    )
 }
 
 #[tauri::command]
@@ -620,7 +629,11 @@ pub fn automation_runs(s: State<'_, AppState>) -> R<Vec<Value>> {
 
 #[tauri::command]
 pub fn notifications_list(s: State<'_, AppState>) -> R<Vec<Value>> {
-    query_json(&s.db.conn(), "SELECT n.*, a.platform, a.name AS account_name FROM notifications n LEFT JOIN accounts a ON a.id = n.account_id ORDER BY n.id DESC LIMIT 500", [])
+    query_json(
+        &s.db.conn(),
+        "SELECT n.*, a.platform, a.name AS account_name FROM notifications n LEFT JOIN accounts a ON a.id = n.account_id ORDER BY n.id DESC LIMIT 500",
+        [],
+    )
 }
 
 #[tauri::command]
@@ -680,7 +693,9 @@ pub fn ig_import_delete(s: State<'_, AppState>, id: i64) -> R<()> {
 pub fn ig_compare(s: State<'_, AppState>, import_id: i64, previous_id: Option<i64>) -> R<Value> {
     let c = s.db.conn();
     let set = |id: i64, list: &str| -> R<BTreeSet<String>> {
-        Ok(c.prepare("SELECT username FROM ig_export_entries WHERE import_id = ?1 AND list = ?2")?.query_map((id, list), |r| r.get(0))?.collect::<Result<_, _>>()?)
+        Ok(c.prepare("SELECT username FROM ig_export_entries WHERE import_id = ?1 AND list = ?2")?
+            .query_map((id, list), |r| r.get(0))?
+            .collect::<Result<_, _>>()?)
     };
     let (fs, fg) = (set(import_id, "followers")?, set(import_id, "following")?);
     let prev = previous_id.map(|p| Ok::<_, AppError>((set(p, "followers")?, set(p, "following")?))).transpose()?;
@@ -700,7 +715,9 @@ pub fn csv_import_metrics(s: State<'_, AppState>, account_id: i64, file_name: St
     for r in &p.rows {
         let cid: Option<i64> = match &r.episode {
             Some(t) => {
-                let id = tx.query_row("SELECT id FROM content_items WHERE account_id = ?1 AND lower(trim(title)) = lower(trim(?2))", (account_id, t), |x| x.get(0)).ok();
+                let id = tx
+                    .query_row("SELECT id FROM content_items WHERE account_id = ?1 AND lower(trim(title)) = lower(trim(?2))", (account_id, t), |x| x.get(0))
+                    .ok();
                 if id.is_none() {
                     unmatched.insert(t.clone());
                     continue;
@@ -740,7 +757,22 @@ pub fn backup_restore(s: State<'_, AppState>, path: String, confirmed: bool) -> 
     db::audit(&s.db.conn(), "backup.restore", "", "")
 }
 
-const EXPORT_TABLES: &[&str] = &["accounts", "content_items", "metric_snapshots", "breakdowns", "drafts", "draft_variants", "templates", "media_assets", "automations", "notifications", "publish_history", "ig_export_imports", "ig_export_entries", "settings"];
+const EXPORT_TABLES: &[&str] = &[
+    "accounts",
+    "content_items",
+    "metric_snapshots",
+    "breakdowns",
+    "drafts",
+    "draft_variants",
+    "templates",
+    "media_assets",
+    "automations",
+    "notifications",
+    "publish_history",
+    "ig_export_imports",
+    "ig_export_entries",
+    "settings",
+];
 
 /// Portable JSON export of all data. Tokens and client secrets live in the OS
 /// credential store and are therefore never included.

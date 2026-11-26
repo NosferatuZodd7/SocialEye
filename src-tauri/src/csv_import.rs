@@ -82,7 +82,12 @@ pub fn parse(content: &str) -> AppResult<CsvParsed> {
     }
     let mut out = CsvParsed {
         metrics: metric_cols.iter().map(|(_, m)| m.clone()).collect(),
-        ignored_columns: headers.iter().enumerate().filter(|(i, _)| Some(*i) != date_col && Some(*i) != ep_col && !metric_cols.iter().any(|(c, _)| c == i)).map(|(_, h)| h.clone()).collect(),
+        ignored_columns: headers
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| Some(*i) != date_col && Some(*i) != ep_col && !metric_cols.iter().any(|(c, _)| c == i))
+            .map(|(_, h)| h.clone())
+            .collect(),
         ..Default::default()
     };
     for rec in rdr.records() {

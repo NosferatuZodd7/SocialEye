@@ -176,15 +176,31 @@ pub async fn sync(ctx: &Ctx<'_>, channel_id: &str) -> AppResult<SyncData> {
     // Channel-level daily analytics.
     let ids_param = format!("channel=={channel_id}");
     let daily = ctx
-        .get(ANALYTICS, &[
-            ("ids", &ids_param), ("startDate", &start), ("endDate", &today_s), ("dimensions", "day"), ("sort", "day"),
-            ("metrics", "views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares"),
-        ])
+        .get(
+            ANALYTICS,
+            &[
+                ("ids", &ids_param),
+                ("startDate", &start),
+                ("endDate", &today_s),
+                ("dimensions", "day"),
+                ("sort", "day"),
+                ("metrics", "views,estimatedMinutesWatched,averageViewDuration,subscribersGained,subscribersLost,likes,comments,shares"),
+            ],
+        )
         .await;
     if let Some(v) = d.soft("daily analytics", daily)? {
         for r in report_rows(&v) {
             let day = r["day"].as_str().unwrap_or_default().to_string();
-            for (k, m) in [("views", "views"), ("estimatedMinutesWatched", "watch_minutes"), ("averageViewDuration", "avg_view_duration_secs"), ("subscribersGained", "subscribers_gained"), ("subscribersLost", "subscribers_lost"), ("likes", "likes"), ("comments", "comments"), ("shares", "shares")] {
+            for (k, m) in [
+                ("views", "views"),
+                ("estimatedMinutesWatched", "watch_minutes"),
+                ("averageViewDuration", "avg_view_duration_secs"),
+                ("subscribersGained", "subscribers_gained"),
+                ("subscribersLost", "subscribers_lost"),
+                ("likes", "likes"),
+                ("comments", "comments"),
+                ("shares", "shares"),
+            ] {
                 if let Some(n) = r.get(k).and_then(Value::as_f64) {
                     d.metric(None, m, n, &day);
                 }
@@ -194,16 +210,29 @@ pub async fn sync(ctx: &Ctx<'_>, channel_id: &str) -> AppResult<SyncData> {
 
     // Per-video analytics for the top videos of the period.
     let per_video = ctx
-        .get(ANALYTICS, &[
-            ("ids", &ids_param), ("startDate", &start), ("endDate", &today_s), ("dimensions", "video"), ("sort", "-views"), ("maxResults", "200"),
-            ("metrics", "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage"),
-        ])
+        .get(
+            ANALYTICS,
+            &[
+                ("ids", &ids_param),
+                ("startDate", &start),
+                ("endDate", &today_s),
+                ("dimensions", "video"),
+                ("sort", "-views"),
+                ("maxResults", "200"),
+                ("metrics", "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage"),
+            ],
+        )
         .await;
     if let Some(v) = d.soft("per-video analytics", per_video)? {
         for r in report_rows(&v) {
             let Some(vid) = r.get("video").and_then(Value::as_str) else { continue };
             if let Some(row) = d.content.iter_mut().find(|c| c.external_id == vid) {
-                for (k, m) in [("estimatedMinutesWatched", "watch_minutes_90d"), ("averageViewDuration", "avg_view_duration_secs"), ("averageViewPercentage", "avg_view_pct"), ("views", "views_90d")] {
+                for (k, m) in [
+                    ("estimatedMinutesWatched", "watch_minutes_90d"),
+                    ("averageViewDuration", "avg_view_duration_secs"),
+                    ("averageViewPercentage", "avg_view_pct"),
+                    ("views", "views_90d"),
+                ] {
                     if let Some(n) = r.get(k) {
                         row.stats.insert(m.into(), n.clone());
                     }
@@ -219,7 +248,12 @@ pub async fn sync(ctx: &Ctx<'_>, channel_id: &str) -> AppResult<SyncData> {
     ] {
         let r = ctx.get(ANALYTICS, &[("ids", &ids_param), ("startDate", &start), ("endDate", &today_s), ("dimensions", dims), ("metrics", metrics)]).await;
         if let Some(v) = d.soft(kind, r)? {
-            d.breakdowns.push(Breakdown { kind: kind.into(), period_start: start.clone(), period_end: today_s.clone(), data: Value::Array(report_rows(&v).into_iter().map(Value::Object).collect()) });
+            d.breakdowns.push(Breakdown {
+                kind: kind.into(),
+                period_start: start.clone(),
+                period_end: today_s.clone(),
+                data: Value::Array(report_rows(&v).into_iter().map(Value::Object).collect()),
+            });
         }
     }
     d.unavailable.push("impressions, impressions CTR: not exposed by the YouTube Analytics API (see YouTube Studio)".into());
@@ -230,11 +264,17 @@ pub async fn sync(ctx: &Ctx<'_>, channel_id: &str) -> AppResult<SyncData> {
 pub async fn retention(ctx: &Ctx<'_>, channel_id: &str, video_id: &str) -> AppResult<Vec<serde_json::Map<String, Value>>> {
     let today = Utc::now().date_naive();
     let v = ctx
-        .get(ANALYTICS, &[
-            ("ids", &format!("channel=={channel_id}")), ("startDate", "2005-02-14"), ("endDate", &today.to_string()),
-            ("dimensions", "elapsedVideoTimeRatio"), ("metrics", "audienceWatchRatio,relativeRetentionPerformance"),
-            ("filters", &format!("video=={video_id}")),
-        ])
+        .get(
+            ANALYTICS,
+            &[
+                ("ids", &format!("channel=={channel_id}")),
+                ("startDate", "2005-02-14"),
+                ("endDate", &today.to_string()),
+                ("dimensions", "elapsedVideoTimeRatio"),
+                ("metrics", "audienceWatchRatio,relativeRetentionPerformance"),
+                ("filters", &format!("video=={video_id}")),
+            ],
+        )
         .await?;
     Ok(report_rows(&v))
 }
@@ -260,7 +300,12 @@ pub fn parse_comments(v: &Value) -> Vec<Comment> {
 }
 
 pub async fn comments(ctx: &Ctx<'_>, video_id: &str) -> AppResult<Vec<Comment>> {
-    let v = ctx.get(&format!("{API}/commentThreads"), &[("part", "snippet"), ("videoId", video_id), ("maxResults", "100"), ("order", "time"), ("textFormat", "plainText")]).await?;
+    let v = ctx
+        .get(
+            &format!("{API}/commentThreads"),
+            &[("part", "snippet"), ("videoId", video_id), ("maxResults", "100"), ("order", "time"), ("textFormat", "plainText")],
+        )
+        .await?;
     Ok(parse_comments(&v))
 }
 
@@ -275,7 +320,10 @@ pub async fn moderate(ctx: &Ctx<'_>, comment_id: &str, m: &Moderation) -> AppRes
             return Ok(());
         }
     };
-    crate::http::send(ctx.http.post(format!("{API}/comments/setModerationStatus")).bearer_auth(ctx.token).query(&[("id", comment_id), ("moderationStatus", status)])).await?;
+    crate::http::send(
+        ctx.http.post(format!("{API}/comments/setModerationStatus")).bearer_auth(ctx.token).query(&[("id", comment_id), ("moderationStatus", status)]),
+    )
+    .await?;
     Ok(())
 }
 
@@ -314,7 +362,11 @@ pub async fn upload(ctx: &Ctx<'_>, req: &PublishRequest, progress: &(dyn Fn(u64,
         let s = init.status().as_u16();
         return Err(crate::http::classify(s, None, &init.text().await.unwrap_or_default()));
     }
-    let session = init.headers().get("location").and_then(|h| h.to_str().ok()).map(String::from).ok_or_else(|| AppError::Api { status: 500, message: "no upload session returned".into(), retryable: false })?;
+    let session = init.headers().get("location").and_then(|h| h.to_str().ok()).map(String::from).ok_or_else(|| AppError::Api {
+        status: 500,
+        message: "no upload session returned".into(),
+        retryable: false,
+    })?;
 
     let mut sent = 0u64;
     let mut buf = vec![0u8; CHUNK];
@@ -347,8 +399,15 @@ pub async fn upload(ctx: &Ctx<'_>, req: &PublishRequest, progress: &(dyn Fn(u64,
             308 => continue, // Resume Incomplete: send the next chunk
             200 | 201 => {
                 let v: Value = resp.json().await?;
-                let id = v["id"].as_str().ok_or_else(|| AppError::Api { status: 500, message: "upload finished without a video id".into(), retryable: false })?.to_string();
-                return Ok(PublishResult { url: Some(format!("https://www.youtube.com/watch?v={id}")), external_id: id, scheduled: req.scheduled_at.is_some() });
+                let id = v["id"]
+                    .as_str()
+                    .ok_or_else(|| AppError::Api { status: 500, message: "upload finished without a video id".into(), retryable: false })?
+                    .to_string();
+                return Ok(PublishResult {
+                    url: Some(format!("https://www.youtube.com/watch?v={id}")),
+                    external_id: id,
+                    scheduled: req.scheduled_at.is_some(),
+                });
             }
             s => return Err(crate::http::classify(s, None, &resp.text().await.unwrap_or_default())),
         }
@@ -361,7 +420,15 @@ pub async fn set_thumbnail(ctx: &Ctx<'_>, video_id: &str, image_path: &str) -> A
         return Err(AppError::validation("thumbnails must be 2 MB or smaller"));
     }
     let mime = if image_path.to_lowercase().ends_with(".png") { "image/png" } else { "image/jpeg" };
-    crate::http::send(ctx.http.post("https://www.googleapis.com/upload/youtube/v3/thumbnails/set").bearer_auth(ctx.token).query(&[("videoId", video_id), ("uploadType", "media")]).header("Content-Type", mime).body(bytes)).await?;
+    crate::http::send(
+        ctx.http
+            .post("https://www.googleapis.com/upload/youtube/v3/thumbnails/set")
+            .bearer_auth(ctx.token)
+            .query(&[("videoId", video_id), ("uploadType", "media")])
+            .header("Content-Type", mime)
+            .body(bytes),
+    )
+    .await?;
     Ok(())
 }
 
@@ -402,7 +469,8 @@ mod tests {
 
     #[test]
     fn metadata_scheduling_forces_private() {
-        let r = PublishRequest { title: Some("x".into()), privacy: Some("public".into()), scheduled_at: Some("2027-01-01T00:00:00Z".into()), ..Default::default() };
+        let r =
+            PublishRequest { title: Some("x".into()), privacy: Some("public".into()), scheduled_at: Some("2027-01-01T00:00:00Z".into()), ..Default::default() };
         let m = video_metadata(&r);
         assert_eq!(m["status"]["privacyStatus"], "private");
         assert_eq!(m["status"]["publishAt"], "2027-01-01T00:00:00Z");

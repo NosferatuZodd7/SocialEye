@@ -41,7 +41,19 @@ fn classify(name: &str) -> Kind {
         Kind::Followers
     } else if stem == "following" {
         Kind::Following
-    } else if ["close_friends", "pending_follow_requests", "recently_unfollowed_profiles", "blocked_profiles", "restricted_profiles", "removed_suggestions", "follow_requests_you've_received", "hide_story_from", "following_hashtags"].contains(&stem) {
+    } else if [
+        "close_friends",
+        "pending_follow_requests",
+        "recently_unfollowed_profiles",
+        "blocked_profiles",
+        "restricted_profiles",
+        "removed_suggestions",
+        "follow_requests_you've_received",
+        "hide_story_from",
+        "following_hashtags",
+    ]
+    .contains(&stem)
+    {
         Kind::Ignored
     } else {
         Kind::Unknown
@@ -63,9 +75,7 @@ pub fn valid_username(u: &str) -> bool {
 }
 
 fn username_from(entry: &Value, item: &Value) -> Option<String> {
-    let from_href = || {
-        entry["href"].as_str().and_then(|h| h.trim_end_matches('/').rsplit('/').next().map(String::from))
-    };
+    let from_href = || entry["href"].as_str().and_then(|h| h.trim_end_matches('/').rsplit('/').next().map(String::from));
     let u = entry["value"].as_str().map(String::from).or_else(|| item["title"].as_str().filter(|t| !t.is_empty()).map(String::from)).or_else(from_href)?;
     let u = u.trim().to_lowercase();
     valid_username(&u).then_some(u)
@@ -159,7 +169,12 @@ pub struct Comparison {
     pub new_following: Option<Vec<String>>,
 }
 
-pub fn compare(followers: &BTreeSet<String>, following: &BTreeSet<String>, previous_followers: Option<&BTreeSet<String>>, previous_following: Option<&BTreeSet<String>>) -> Comparison {
+pub fn compare(
+    followers: &BTreeSet<String>,
+    following: &BTreeSet<String>,
+    previous_followers: Option<&BTreeSet<String>>,
+    previous_following: Option<&BTreeSet<String>>,
+) -> Comparison {
     let v = |s: std::collections::btree_set::Difference<'_, String>| s.cloned().collect::<Vec<_>>();
     Comparison {
         not_following_back: v(following.difference(followers)),

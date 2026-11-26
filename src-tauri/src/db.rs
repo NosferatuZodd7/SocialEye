@@ -246,11 +246,7 @@ impl Db {
         if ok != "ok" {
             return Err(AppError::validation("backup file failed integrity check"));
         }
-        let has_accounts: i64 = incoming.query_row(
-            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='accounts'",
-            [],
-            |r| r.get(0),
-        )?;
+        let has_accounts: i64 = incoming.query_row("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='accounts'", [], |r| r.get(0))?;
         if has_accounts == 0 {
             return Err(AppError::validation("file is not a SocialEye backup"));
         }
@@ -266,9 +262,7 @@ impl Db {
 fn migrate(conn: &Connection) -> AppResult<()> {
     let current: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if current as usize > MIGRATIONS.len() {
-        return Err(AppError::Database {
-            message: "database was created by a newer SocialEye version".into(),
-        });
+        return Err(AppError::Database { message: "database was created by a newer SocialEye version".into() });
     }
     for (i, sql) in MIGRATIONS.iter().enumerate().skip(current as usize) {
         conn.execute_batch(&format!("BEGIN; {sql}; PRAGMA user_version = {}; COMMIT;", i + 1))?;
@@ -315,23 +309,12 @@ pub fn get_setting(conn: &Connection, key: &str) -> AppResult<Option<String>> {
 }
 
 pub fn set_setting(conn: &Connection, key: &str, value: &str) -> AppResult<()> {
-    conn.execute(
-        "INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        (key, value),
-    )?;
+    conn.execute("INSERT INTO settings(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))?;
     Ok(())
 }
 
 /// Upsert a daily metric value. Returns the previous value for the same day (if any).
-pub fn put_metric(
-    conn: &Connection,
-    account_id: i64,
-    content_id: Option<i64>,
-    metric: &str,
-    value: f64,
-    day: &str,
-    source: &str,
-) -> AppResult<()> {
+pub fn put_metric(conn: &Connection, account_id: i64, content_id: Option<i64>, metric: &str, value: f64, day: &str, source: &str) -> AppResult<()> {
     conn.execute(
         "INSERT INTO metric_snapshots(account_id, content_id, metric, value, day, source)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
@@ -347,11 +330,7 @@ mod tests {
     use super::*;
 
     fn account(conn: &Connection) -> i64 {
-        conn.execute(
-            "INSERT INTO accounts(platform, account_type, external_id, name) VALUES ('youtube','channel','UC1','Ch')",
-            [],
-        )
-        .unwrap();
+        conn.execute("INSERT INTO accounts(platform, account_type, external_id, name) VALUES ('youtube','channel','UC1','Ch')", []).unwrap();
         conn.last_insert_rowid()
     }
 

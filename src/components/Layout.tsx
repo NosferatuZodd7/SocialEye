@@ -71,6 +71,21 @@ function SearchBox() {
   );
 }
 
+function AccountSwitcher() {
+  const t = useT();
+  const nav = useNavigate();
+  const { accounts } = useStore();
+  const list = accounts.filter((a) => a.account_type !== "user");
+  if (!list.length) return null;
+  return (
+    <select aria-label={t("common.account")} value="" onChange={(e) => { const a = list.find((x) => String(x.id) === e.target.value); if (a) nav(`/${a.platform}?account=${a.id}`); }}
+      className="max-w-52 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[13px]">
+      <option value="">{t("top.allAccounts")}</option>
+      {list.map((a) => <option key={a.id} value={a.id}>{PLATFORM_META[a.platform].label}: {a.name}</option>)}
+    </select>
+  );
+}
+
 function SearchItem({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} className="flex w-full items-center gap-2 truncate rounded px-2 py-1.5 text-left hover:bg-[var(--panel-2)] cursor-pointer">{children}</button>;
 }
@@ -104,6 +119,7 @@ export function Layout() {
         <header className="no-print flex items-center gap-3 border-b border-[var(--line)] px-6 py-2.5">
           <SearchBox />
           <div className="flex-1" />
+          <AccountSwitcher />
           <NavLink to="/notifications" aria-label={t("top.notifications")} className="relative rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--panel-2)] hover:text-[var(--ink)]">
             <Bell className="size-4" />{unread > 0 && <span className="absolute top-1 right-1 size-2 rounded-full bg-rose" />}
           </NavLink>
