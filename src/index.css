@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", sans-serif;
+  --color-iris: #7c5cff;
+  --color-iris-soft: #a593ff;
+  --color-teal: #2dd4bf;
+  --color-rose: #ff5d8f;
+  --color-instagram: #e1306c;
+  --color-facebook: #1877f2;
+  --color-youtube: #ff3b30;
+  --color-spotify: #1db954;
+  --color-ok: #22c55e;
+  --color-warn: #f59e0b;
+  --color-bad: #ef4444;
+}
+
+:root {
+  --bg: #f4f5fa;
+  --panel: #ffffff;
+  --panel-2: #eceef6;
+  --line: #dfe2ee;
+  --ink: #151830;
+  --muted: #5d6284;
+  --hatch: #d6d9e8;
+  color-scheme: light;
+}
+.dark {
+  --bg: #0e1124;
+  --panel: #161a33;
+  --panel-2: #1f2442;
+  --line: #2a3054;
+  --ink: #e8eaf8;
+  --muted: #9097c0;
+  --hatch: #2c3258;
+  color-scheme: dark;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; margin: 0; }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+
+/* Unavailable data is shown as a hatched surface, never as zero. */
+.hatched {
+  background-image: repeating-linear-gradient(135deg, var(--hatch) 0 2px, transparent 2px 9px);
+}
+
+:focus-visible { outline: 2px solid var(--color-iris); outline-offset: 2px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+  .print-area { padding: 0 !important; }
+}
