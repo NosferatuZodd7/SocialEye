@@ -64,6 +64,7 @@ pub fn run() {
             commands::metrics_latest,
             commands::breakdowns,
             commands::youtube_retention,
+            commands::youtube_update_video,
             commands::comments_list,
             commands::comment_moderate,
             commands::media_add,

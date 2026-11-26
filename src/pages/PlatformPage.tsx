@@ -10,7 +10,7 @@ import { KIND_LABELS, PLATFORM_META, STOCK_METRICS, metricLabel, summarize } fro
 import { openExternal } from "../lib/files";
 import { useFeedback } from "../components/feedback";
 import { Bars, MetricTrend, PLATFORM_HEX, TrendChart } from "../components/charts";
-import { Badge, Button, Empty, ErrorBox, Input, Modal, PageHeader, Panel, Select, Spinner, Stat, Table, Tabs } from "../components/ui";
+import { Badge, Button, Empty, ErrorBox, Input, Modal, PageHeader, Panel, Select, Spinner, Stat, Table, Tabs, Textarea } from "../components/ui";
 import { CapabilityList } from "./Accounts";
 import { InstagramFollowers } from "./InstagramFollowers";
 import { SpotifyImport } from "./SpotifyImport";
@@ -223,10 +223,35 @@ function ContentDetail({ item, account, onClose }: { item: ContentItem; account:
               {ret.error && <ErrorBox message={ret.error} />}
             </div>
           )}
+          {account.platform === "youtube" && <EditVideo account={account} item={item} />}
           {account.platform !== "spotify" && <Comments account={account} item={item} />}
         </div>
       </div>
     </Modal>
+  );
+}
+
+function EditVideo({ account, item }: { account: Account; item: ContentItem }) {
+  const t = useT();
+  const { confirm, toast } = useFeedback();
+  const [f, setF] = useState<{ title: string; description: string; privacy: string } | null>(null);
+  const act = useAction();
+  const save = () => f && act.run(async () => {
+    if (!(await confirm(t("pf.editConfirm")))) return;
+    await api.updateVideo(account.id, item.external_id, f.title, f.description, f.privacy);
+    toast(t("common.saved")); setF(null);
+  });
+  if (!f) return <Button className="mt-3" onClick={() => setF({ title: item.title ?? "", description: item.description ?? "", privacy: String(stats(item).privacy ?? "public") })}>{t("pf.editVideo")}</Button>;
+  return (
+    <div className="mt-3 grid gap-2 rounded-lg border border-[var(--line)] p-3">
+      <Input label={`${t("st.draftTitle")} (${f.title.length}/100)`} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+      <Textarea label={t("st.body")} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+      <Select label={t("st.privacy")} value={f.privacy} onChange={(e) => setF({ ...f, privacy: e.target.value })}>
+        <option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option>
+      </Select>
+      {act.error && <ErrorBox message={act.error} />}
+      <div className="flex gap-2"><Button variant="primary" busy={act.busy} onClick={save}>{t("common.save")}</Button><Button variant="ghost" onClick={() => setF(null)}>{t("common.cancel")}</Button></div>
+    </div>
   );
 }
 

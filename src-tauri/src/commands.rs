@@ -296,6 +296,32 @@ pub async fn youtube_retention(s: State<'_, AppState>, account_id: i64, video_id
     Ok(serde_json::to_value(connectors::youtube::retention(&ctx, &acc.external_id, &video_id).await?)?)
 }
 
+#[tauri::command]
+pub async fn youtube_update_video(
+    s: State<'_, AppState>,
+    account_id: i64,
+    video_id: String,
+    title: String,
+    description: String,
+    privacy: String,
+    confirmed: bool,
+) -> R<()> {
+    require_confirmation(confirmed, "changing a published video")?;
+    ctx_for(&s, account_id, async |ctx, p| {
+        if p != Platform::Youtube {
+            return Err(AppError::validation("not a YouTube account"));
+        }
+        connectors::youtube::update_metadata(ctx, &video_id, &title, &description, &privacy).await
+    })
+    .await?;
+    let c = s.db.conn();
+    c.execute(
+        "UPDATE content_items SET title = ?1, description = ?2 WHERE account_id = ?3 AND external_id = ?4",
+        (&title, &description, account_id, &video_id),
+    )?;
+    db::audit(&c, "youtube.update_video", &video_id, &privacy)
+}
+
 async fn ctx_for<T>(s: &AppState, account_id: i64, f: impl AsyncFnOnce(&Ctx<'_>, Platform) -> R<T>) -> R<T> {
     let (acc, gv) = {
         let c = s.db.conn();

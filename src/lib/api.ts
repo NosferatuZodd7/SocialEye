@@ -84,6 +84,7 @@ export const api = {
   latest: () => call<MetricPoint[]>("metrics_latest"),
   breakdowns: (accountId: number) => call<{ kind: string; period_start: string; period_end: string; data_json: string; source: string }[]>("breakdowns", { accountId }),
   retention: (accountId: number, videoId: string) => call<{ elapsedVideoTimeRatio: number; audienceWatchRatio: number }[]>("youtube_retention", { accountId, videoId }),
+  updateVideo: (accountId: number, videoId: string, title: string, description: string, privacy: string) => call<void>("youtube_update_video", { accountId, videoId, title, description, privacy, confirmed: true }),
   comments: (accountId: number, contentExternalId: string) => call<Comment[]>("comments_list", { accountId, contentExternalId }),
   moderate: (accountId: number, commentId: string, moderation: { action: "hide" | "unhide" | "delete" } | { action: "reply"; text: string }, confirmed = false) =>
     call<void>("comment_moderate", { accountId, commentId, moderation, confirmed }),

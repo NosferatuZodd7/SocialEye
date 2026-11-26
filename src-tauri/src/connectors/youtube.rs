@@ -414,6 +414,41 @@ pub async fn upload(ctx: &Ctx<'_>, req: &PublishRequest, progress: &(dyn Fn(u64,
     }
 }
 
+/// Update title/description/visibility of an existing video. videos.update replaces the
+/// whole snippet (categoryId is mandatory), so the current snippet is fetched and modified.
+pub async fn update_metadata(ctx: &Ctx<'_>, video_id: &str, title: &str, description: &str, privacy: &str) -> AppResult<()> {
+    let probe = PublishRequest {
+        title: Some(title.into()),
+        body: description.into(),
+        privacy: Some(privacy.into()),
+        media_kind: Some("video".into()),
+        media_path: Some("-".into()),
+        ..Default::default()
+    };
+    let errs = validate_publish(Platform::Youtube, &probe, Utc::now());
+    if !errs.is_empty() {
+        return Err(AppError::validation(errs.join("; ")));
+    }
+    let v = ctx.get(&format!("{API}/videos"), &[("part", "snippet,status"), ("id", video_id)]).await?;
+    let item = v["items"].get(0).ok_or_else(|| AppError::NotFound { message: "video not found or not owned by this channel".into() })?;
+    let mut snippet = item["snippet"].clone();
+    snippet["title"] = json!(title);
+    snippet["description"] = json!(description);
+    if let Some(o) = snippet.as_object_mut() {
+        // Read-only fields that the API rejects on update.
+        for k in ["thumbnails", "channelTitle", "localized", "publishedAt", "channelId", "liveBroadcastContent"] {
+            o.remove(k);
+        }
+    }
+    let mut status = json!({ "privacyStatus": privacy });
+    if let Some(m) = item["status"]["selfDeclaredMadeForKids"].as_bool() {
+        status["selfDeclaredMadeForKids"] = json!(m);
+    }
+    let body = json!({ "id": video_id, "snippet": snippet, "status": status });
+    crate::http::send(ctx.http.put(format!("{API}/videos")).bearer_auth(ctx.token).query(&[("part", "snippet,status")]).json(&body)).await?;
+    Ok(())
+}
+
 pub async fn set_thumbnail(ctx: &Ctx<'_>, video_id: &str, image_path: &str) -> AppResult<()> {
     let bytes = tokio::fs::read(image_path).await?;
     if bytes.len() > 2 * 1024 * 1024 {

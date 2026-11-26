@@ -42,7 +42,7 @@ export const en = {
   // platform pages
   "pf.noAccounts": "No {platform} account connected.", "pf.connectHint": "Connect one in Accounts to see its data here.",
   "pf.content": "Content", "pf.overview": "Overview", "pf.stats": "Key figures", "pf.trend": "Trend", "pf.kind": "Content type",
-  "pf.detail": "Details", "pf.comments": "Comments", "pf.loadComments": "Load comments", "pf.noComments": "No comments.", "pf.hide": "Hide", "pf.unhide": "Show",
+  "pf.detail": "Details", "pf.editVideo": "Edit title, description and visibility", "pf.editConfirm": "Update this video on YouTube? The change is visible to viewers immediately.", "pf.comments": "Comments", "pf.loadComments": "Load comments", "pf.noComments": "No comments.", "pf.hide": "Hide", "pf.unhide": "Show",
   "pf.reply": "Reply", "pf.replyPlaceholder": "Write a reply…", "pf.send": "Send reply", "pf.deleteComment": "Delete this comment permanently?",
   "pf.history": "History", "pf.compare": "Compare", "pf.compareHint": "Select up to 4 items to compare.", "pf.best": "Best performing", "pf.worst": "Lowest performing",
   "pf.retention": "Audience retention", "pf.loadRetention": "Load retention", "pf.traffic": "Traffic sources", "pf.demographics": "Audience demographics", "pf.geography": "Top countries",
@@ -141,7 +141,7 @@ export const pt: Record<Key, string> = {
   "acc.addPodcast": "Acompanhar um podcast", "acc.podcastUrl": "Ligação do programa no Spotify", "acc.savedShows": "Da sua biblioteca", "acc.history": "Histórico de sincronização",
   "pf.noAccounts": "Nenhuma conta {platform} ligada.", "pf.connectHint": "Ligue uma em Contas para ver os dados aqui.",
   "pf.content": "Conteúdos", "pf.overview": "Visão geral", "pf.stats": "Números principais", "pf.trend": "Evolução", "pf.kind": "Tipo de conteúdo",
-  "pf.detail": "Detalhes", "pf.comments": "Comentários", "pf.loadComments": "Carregar comentários", "pf.noComments": "Sem comentários.", "pf.hide": "Ocultar", "pf.unhide": "Mostrar",
+  "pf.detail": "Detalhes", "pf.editVideo": "Editar título, descrição e visibilidade", "pf.editConfirm": "Atualizar este vídeo no YouTube? A alteração fica visível de imediato.", "pf.comments": "Comentários", "pf.loadComments": "Carregar comentários", "pf.noComments": "Sem comentários.", "pf.hide": "Ocultar", "pf.unhide": "Mostrar",
   "pf.reply": "Responder", "pf.replyPlaceholder": "Escreva uma resposta…", "pf.send": "Enviar resposta", "pf.deleteComment": "Eliminar este comentário permanentemente?",
   "pf.history": "Histórico", "pf.compare": "Comparar", "pf.compareHint": "Selecione até 4 itens para comparar.", "pf.best": "Melhor desempenho", "pf.worst": "Menor desempenho",
   "pf.retention": "Retenção de audiência", "pf.loadRetention": "Carregar retenção", "pf.traffic": "Origens de tráfego", "pf.demographics": "Demografia da audiência", "pf.geography": "Principais países",
